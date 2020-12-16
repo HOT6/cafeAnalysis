@@ -12,25 +12,21 @@ event <- NULL
 seoul_cafe <- read.csv('../data/seoul_cafe.csv')
 
 cafe_dong <- seoul_cafe %>% 
-  group_by(행정동명, 행정동코드) %>% 
+  group_by(행정동명, adm_cd2) %>% 
   summarise(count = n())
 
-colnames(cafe_dong)[2] <- "adm_cd2"
+getwd()
 
 # 서울 생활 인구
 seoul_pop <- read.csv('../data/seoul_pop.csv')
 
 # 수유1동
-cafe_dong[cafe_dong$adm_cd2 == 1130561000, ]$adm_cd2 <- 1130561500
 seoul_pop[seoul_pop$adm_cd2 == 1130561000, ]$adm_cd2 <- 1130561500
 # 수유2동
-cafe_dong[cafe_dong$adm_cd2 == 1130562000, ]$adm_cd2 <- 1130562500
 seoul_pop[seoul_pop$adm_cd2 == 1130562000, ]$adm_cd2 <- 1130562500
 # 번1동
-cafe_dong[cafe_dong$adm_cd2 == 1130559000, ]$adm_cd2 <- 1130559500
 seoul_pop[seoul_pop$adm_cd2 == 1130559000, ]$adm_cd2 <- 1130559500
 # 번2동
-cafe_dong[cafe_dong$adm_cd2 == 1130560000, ]$adm_cd2 <- 1130560300
 seoul_pop[seoul_pop$adm_cd2 == 1130560000, ]$adm_cd2 <- 1130560300
 
 
@@ -59,15 +55,13 @@ seoul_detail_mean <- seoul_detail %>%
 
 seoul <-
   readOGR(
-    dsn = '../data/seoul_detail',
+    dsn = '../data/simple',
     layer = 'seoul_detail',
     encoding = 'utf-8')
 
-# GRS80 좌표계를 WGS84 좌표계로 변환.
-seoul <- spTransform(x = seoul, CRSobj = CRS('+proj=longlat +datum=WGS84'))
-
 seoul@data$TOT_REG_CD <- as.character(seoul@data$TOT_REG_CD)
 seoul_detail_mean$TOT_REG_CD <- as.character(seoul_detail_mean$TOT_REG_CD)
+
 detail_map <- merge(seoul, seoul_detail_mean, by = 'TOT_REG_CD')
 
 
@@ -191,7 +185,7 @@ function(input, output, session) {
   # sub map
   drawSubmap <- function(adm_code2) {
     # 위도, 경도 center 
-    selectedLayer <- seoul_cafe[seoul_cafe$행정동코드 == adm_code2, ]
+    selectedLayer <- seoul_cafe[seoul_cafe$adm_cd2 == adm_code2, ]
     center_lon = mean(selectedLayer$경도)
     center_lat = mean(selectedLayer$위도)
     

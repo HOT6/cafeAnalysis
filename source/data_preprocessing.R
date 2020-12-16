@@ -1,6 +1,7 @@
-setwd('C:/Users/dropl/Desktop/R/Work_R/project')
-seoul_pop <- read.csv("../data/seoul_population.csv")
-seoul_detail_pop <- read.csv("../data/LOCAL_PEOPLE_20201107.csv", stringsAsFactors = F)
+
+##### 생활 인구 ####
+seoul_pop <- read.csv("data/seoul_population.csv")
+seoul_detail_pop <- read.csv("data/LOCAL_PEOPLE_20201107.csv", stringsAsFactors = F)
 
 seoul_pop <- seoul_pop %>% 
   dplyr::select(-남자0세부터9세생활인구수, -여자0세부터9세생활인구수)
@@ -192,76 +193,12 @@ seoul_detail_pop <- seoul_detail_pop %>%
 
 seoul_pop$adm_cd2 <- paste0(seoul_pop2$adm_cd2, '00')
 
-write.csv(seoul_detail_pop, "../data/seoul_detail_pop.csv", row.names = T)
-write.csv(seoul_pop2, "../data/seoul_pop.csv", row.names = T)
-
-
-### test 
-library(rgdal)
-seoul <-
-  readOGR(
-    dsn = '../data/seoul3',
-    layer = 'seoul3',
-    encoding = 'utf-8')
-
-selectedData <- c('m10', 'm20')
-
-seoul <- ungroup(seoul_pop)
-
-selectedPop <- seoul %>% mutate(mean_pop = rowMeans(select(seoul, selectedData))) %>% 
-  group_by(adm_cd2) %>% summarise(mean_pop = mean(mean_pop))
-
-seoul_map@data$mean_pop[match(selectedPop$adm_cd2, seoul_map@data$adm_cd2)] <- selectedPop$mean_pop
-
-seoul_map@data$mean_pop[match(selectedPop$adm_cd2, seoul_map@data$adm_cd2)]
-
-
-selectedData
-
-
-nrow(seoul_map@data)
-nrow(selectedPop)
-
-setdiff(seoul_map@data$adm_cd2, selectedPop$adm_cd2)
-head(selectedPop)
-
-list(selectedData)
-
-
-# seoul_pop2 %>% filter(adm_cd2 == 1130561000) %>% 
-#   group_by(hour) %>% 
-#   summarise(mean_pop = sum(m10, m20)) %>% 
-#   head()
-# 
-# pop_group_hour <- seoul_pop2 %>% filter(adm_cd2 == 1130561000) %>% 
-#   group_by(hour) %>% 
-#   dplyr::select(selectedData)
-# 
-# outputData <- data.frame(hour = c(0:23),
-#            mean_pop = round(rowMeans(pop_group_hour[, selectedData])))
-# outputData
-
-
-
-selectedData <- c('m10', 'm20')
-
-pop_group_hour <- seoul_pop2 %>%
-  group_by(hour) %>%
-  dplyr::select(selectedData) %>% 
-  summarise_all(mean)
-
-round(rowMeans(pop_group_hour[, selectedData]))
-pop_group_hour
-
-graphData <- data.frame(hour = c(0:23),
-                        mean_pop = round(rowMeans(pop_group_hour[, selectedData])))
-
-# 1144066000
-head(seoul_pop2)
+write.csv(seoul_detail_pop, "data/seoul_detail_pop.csv", row.names = T)
+write.csv(seoul_pop2, "data/seoul_pop.csv", row.names = T)
 
 
 ##### 서울 상권 정보 ####
-seoul_commercial <- read_excel("../data/seoul_commercial.xlsx")
+seoul_commercial <- read_excel("data/seoul_commercial.xlsx")
 
 seoul_commercial <- seoul_commercial %>% 
   dplyr::select(상호명, 지점명, 상권업종대분류명, 상권업종중분류명, 상권업종소분류명, 행정동명, 도로명주소, 경도, 위도, 행정동코드)
@@ -270,4 +207,58 @@ seoul_commercial <- seoul_commercial %>% filter(!is.na(seoul_commercial$위도))
 # 커피점 필터링
 seoul_cafe <- seoul_commercial %>% filter(상권업종중분류명 == "커피점/카페")
 
-write.csv(seoul_cafe, '../data/seoul_cafe.csv', row.names = T)
+
+colnames(seoul_cafe)[10]  <- "adm_cd2"
+
+# 수유1동
+seoul_cafe[seoul_cafe$adm_cd2 == 1130561000, ]$adm_cd2 <- 1130561500
+# 수유2동
+seoul_cafe[seoul_cafe$adm_cd2 == 1130562000, ]$adm_cd2 <- 1130562500
+# 번1동
+seoul_cafe[seoul_cafe$adm_cd2 == 1130559000, ]$adm_cd2 <- 1130559500
+# 번2동
+seoul_cafe[seoul_cafe$adm_cd2 == 1130560000, ]$adm_cd2 <- 1130560300
+
+
+write.csv(seoul_cafe, 'data/seoul_cafe.csv', row.names = T)
+
+
+
+
+##### 집계구 #### 
+library(rgdal)
+seoul <-
+  readOGR(
+    dsn = 'data/seoul3',
+    layer = 'seoul3',
+    encoding = 'utf-8')
+
+
+seoul_deatil <-
+  readOGR(
+    dsn = 'data/seoul_detail',
+    layer = 'seoul_detail',
+    encoding = 'utf-8')
+
+
+seoul_deatil@polygons[[1]]@Polygons[[1]]@coords %>% head(n = 10L)
+
+# GRS80 좌표계를 WGS84 좌표계로 변환.
+seoul_deatil <- spTransform(x = seoul_deatil, CRSobj = CRS('+proj=longlat +datum=WGS84'))
+
+seoul_deatil@polygons[[1]]@Polygons[[1]]@coords %>% head(n = 10L)
+
+# save seoul_deatil as shapefiles
+writeOGR(
+  obj = seoul_deatil,
+  dsn = 'data/simple',
+  layer = 'seoul_detail',
+  driver = 'ESRI Shapefile')
+
+
+
+seoul <-
+  readOGR(
+    dsn = 'data/simple',
+    layer = 'seoul_detail',
+    encoding = 'utf-8')
